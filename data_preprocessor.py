@@ -36,12 +36,17 @@ def preprocess_data_by_severity(label_dir:str, data_original_dir:str) -> str:
     
     import os
     #make Processed directory and 4 classes directories of images
-    os.mkdir(os.path.join(data_original_dir, "Processed"))
+    if os.path.exists(f"./Data/Processed"):
+        os.mkdir(os.path.join(data_original_dir, "Processed"))
     dire = "./Data/Processed"
-    os.mkdir(os.path.join(dire, "Moderate"))
-    os.mkdir(os.path.join(dire, "Mild"))
-    os.mkdir(os.path.join(dire, "Severe"))
-    os.mkdir(os.path.join(dire, "Normal_PCR"))
+    if os.path.exists(f"./Data/Processed/Moderate"):
+        os.mkdir(os.path.join(dire, "Moderate"))
+    if os.path.exists(f"./Data/Processed/Mild"):
+        os.mkdir(os.path.join(dire, "Mild"))
+    if os.path.exists(f"./Data/Processed/Severe"):
+        os.mkdir(os.path.join(dire, "Severe"))
+    if os.path.exists(f"./Data/Processed/Normal_PCR"):
+        os.mkdir(os.path.join(dire, "Normal_PCR"))
     
     #add image to corresponding class directory using label from csv file
     for i in range(len(names_list)):
@@ -56,7 +61,8 @@ def preprocess_data_by_severity(label_dir:str, data_original_dir:str) -> str:
             shutil.copy(f"./Data/P/{names_list[i]}.jpg","./Data/Processed/Normal_PCR/")
     
     #make class directory for negative class
-    shutil.copytree("./Data/N/","./Data/Processed/Neg/")
+    if os.path.exists(f"./Data/Processed/Neg"):
+        shutil.copytree("./Data/N/","./Data/Processed/Neg/")
     return dire
 
 dire = preprocess_data_by_severity("./severity.csv","./Data")
