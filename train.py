@@ -1,3 +1,4 @@
+from joblib import PrintTime
 from matplotlib import pyplot as plt
 import torch
 import numpy as np
@@ -8,6 +9,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from tqdm.notebook import tqdm
 
+from collections import Counter
 
 def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, worker:int):
     '''
@@ -28,15 +30,15 @@ def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, 
                          std=[0.229, 0.224, 0.225])])
     
     dataset = torchvision.datasets.ImageFolder(root=directory, transform=trans) #read image in folder to data with labels
-    
     train_len = len(dataset) #get length of whole data
     ind = list(range(train_len)) #indices of whole data
     spl = int(np.floor(test_size * train_len)) #index of test data
-    
     #reproducibility and shuffle step
     np.random.seed(rand_num) 
     np.random.shuffle(ind)
     
+    print(dict(Counter(dataset.targets)))
+
     #sampling preparation steps
     train_id, test_id = ind[spl:], ind[:spl]
     tr_sampl = SubsetRandomSampler(train_id)
@@ -47,64 +49,77 @@ def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, 
     testloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=te_sampl,num_workers=worker)
     return (trainloader, testloader)
 
-def eval(net, testloader, device):
-    net.eval()
-    accuracy = 0.0
-    total = 0.0
-
-    # for class accuracy
-    nb_classes = 5
-    confusion_matrix = torch.zeros(nb_classes, nb_classes)
-    
-    with torch.no_grad():
-        for i, data in enumerate(testloader):
-            images, labels = data
-            images = images.to(device)
-            labels = labels.to(device)
-            outputs = net(images)
-            _, predicted = torch.max(outputs, 1)
-            total += labels.size(0)
-            accuracy += (predicted == labels).sum().item()
-            for t, p in zip(labels.view(-1), predicted.view(-1)):
-                confusion_matrix[t.long(), p.long()] += 1
-
-    # compute the accuracy over all test images
-    accuracy = (100 * accuracy / total)
-    class_accuracy = (confusion_matrix.diag()/confusion_matrix.sum(1)).tolist()
-    return accuracy, class_accuracy
-
-
-def train(net, optimizer, criterion, epochs, trainloader, testloader):
+def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testloader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Training on {device}')
     net.to(device)
-    losses = []
-    
-    for epoch in tqdm(range(epochs)):
-        Loss = 0.0
-        count = 0
-        for iter, data in enumerate(trainloader):
-            images, labels = data
+
+    train_losses = []
+    train_accu = []
+    test_losses = []
+    test_accu = []
+    # Train the model
+    total_step = len(trainloader)
+    for epoch in tqdm(range(num_epochs)):
+        running_loss = 0
+        correct = 0
+        total = 0
+        net.train()
+        for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.to(device)
-            predicted = net(images)
+            
+            # Forward pass
+            outputs = net(images)
+            loss = criterion(outputs, labels)
+
+            # Backward and optimize
             optimizer.zero_grad()
-            loss = criterion(predicted, labels)
             loss.backward()
             optimizer.step()
+            running_loss += loss.item()
 
-            Loss += loss.item() #accumulate the loss
-            count += 1
+            _, predicted = outputs.max(1)
+            total += labels.size(0)
+            correct += predicted.eq(labels).sum().item()
+            train_loss=running_loss/len(trainloader)
+            train_accuracy = 100.*correct/total
+            
+            if i % 5 == 4:
+                print ('Epoch [{}/{}], Step [{}/{}], Accuracy: {:.3f}, Train Loss: {:.4f}'
+                .format(epoch+1, num_epochs, i+1, total_step, train_accuracy, loss.item()))
+            
+            
+        if epoch % 5 == 4:
+            net.eval()
+            with torch.no_grad():
+                correct = 0
+                total = 0
+                running_loss = 0
+                nb_classes = 2
+                confusion_matrix = torch.zeros(nb_classes, nb_classes)
+                for images, labels in testloader:
+                    images = images.to(device)
+                    labels = labels.to(device)
+                    outputs = net(images)
+                    loss= criterion(outputs,labels)
+                    running_loss+=loss.item()
+                    _, predicted = torch.max(outputs.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+                    test_loss=running_loss/len(testloader)
+                    test_accuracy = (correct*100)/total
+                    for t, p in zip(labels.view(-1), predicted.view(-1)):
+                        confusion_matrix[t.long(), p.long()] += 1
 
-        avg_loss = Loss/count
-        losses.append(avg_loss) #append the average loss for each batch
-        print('Epoch:[{}/{}], training loss: {:.4f}'.format(epoch+1, epochs, avg_loss))
+                class_acc = (confusion_matrix.diag()/confusion_matrix.sum(1)).tolist()
+                print('Epoch: %.0f | Test Loss: %.3f | Accuracy: %.3f'%(epoch+1, test_loss, test_accuracy))
+                print(f'Class accuracy: {class_acc}')
+        
+        print("-----------------------------------------------")
 
-        # validation
-        if epoch%5==4:
-            overall, class_acc = eval(net, testloader, device)
-            print(f'Accuracy of the network on validation set: {overall:.4f} %')
-            print(f'Class accuracy: {class_acc}')
-
-    plt.plot(losses)
+        train_accu.append(train_accuracy)
+        train_losses.append(train_loss)
+        # test_losses.append(test_loss)
+        # test_accu.append(test_accuracy)
 
