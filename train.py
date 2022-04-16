@@ -13,6 +13,8 @@ from tqdm.notebook import tqdm
 
 from collections import Counter
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, worker:int):
     '''
         directory: the directory of processed directory with class folders inside
@@ -52,9 +54,7 @@ def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, 
     return (trainloader, testloader)
 
 def run(model_name, net, optimizer, scheduler , criterion, num_epochs, trainloader, testloader):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Training on {device}')
-    net.to(device)
 
     best_accuracy = float('-inf')
     train_losses = []
