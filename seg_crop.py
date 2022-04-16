@@ -11,6 +11,11 @@ from keras import backend as keras
 
 from glob import glob
 from tqdm import tqdm
+from pathlib import Path
+
+Path('./cleaned-data/').mkdir(parents=True, exist_ok=True)
+Path('./cleaned-data/N').mkdir(parents=True, exist_ok=True)
+Path('./cleaned-data/P').mkdir(parents=True, exist_ok=True)
 
 SEGMENTATION_MODEL_DIR = os.path.join("..", "input")
 
