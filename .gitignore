@@ -3,3 +3,4 @@ cleaned-data/
 __pycache__/
 checkpoints/
 model_store/
+input/
