@@ -7,6 +7,8 @@ import torchvision
 from torchvision import transforms
 from torch.utils.data.sampler import SubsetRandomSampler
 
+from pathlib import Path
+
 from tqdm.notebook import tqdm
 
 from collections import Counter
@@ -49,11 +51,12 @@ def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, 
     testloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=te_sampl,num_workers=worker)
     return (trainloader, testloader)
 
-def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testloader):
+def run(model_name, net, optimizer, scheduler , criterion, num_epochs, trainloader, testloader):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Training on {device}')
     net.to(device)
 
+    best_accuracy = float('-inf')
     train_losses = []
     train_accu = []
     test_losses = []
@@ -94,6 +97,7 @@ def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testload
         scheduler.step()
             
         if epoch % 5 == 4:
+            print('')
             print('===================Validating===================')
             net.eval()
             with torch.no_grad():
@@ -119,12 +123,31 @@ def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testload
                 class_acc = (confusion_matrix.diag()/confusion_matrix.sum(1)).tolist()
                 print('Epoch: %.0f | Test Loss: %.3f | Accuracy: %.3f'%(epoch+1, test_loss, test_accuracy))
                 print(f'Class accuracy: {class_acc}')
-        
-        print("-----------------------------------------------")
+            print('')
+    
+        if test_accuracy > best_accuracy:
+            Path('model_store/').mkdir(parents=True, exist_ok=True)
+            torch.save(net.state_dict(), 'model_store/' + model_name + 'best-model-parameters.pt')
+
+        for p in optimizer.param_groups:
+                print(f"Epoch {epoch+1} Learning Rate: {p['lr']}")
+
+        path = 'checkpoints/checkpoint{:04d}.pth.tar'.format(epoch)
+        Path('checkpoints/').mkdir(parents=True, exist_ok=True)
+        torch.save(
+            {
+                'epoch': num_epochs,
+                'model_state_dict': net.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': loss
+            }, path
+        )
 
         train_accu.append(train_accuracy)
         train_losses.append(train_loss)
         test_losses.append(test_loss)
         test_accu.append(test_accuracy)
+
+        print("-----------------------------------------------")
 
     return train_accu,test_accu, test_losses, train_losses 
