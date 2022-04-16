@@ -65,6 +65,9 @@ def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testload
         correct = 0
         total = 0
         net.train()
+        test_loss = 0
+        test_accuracy = 0
+
         for i, (images, labels) in enumerate(trainloader):
             images = images.to(device)
             labels = labels.to(device)
@@ -88,9 +91,10 @@ def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testload
             if i % 5 == 4:
                 print ('Epoch [{}/{}], Step [{}/{}], Accuracy: {:.3f}, Train Loss: {:.4f}'
                 .format(epoch+1, num_epochs, i+1, total_step, train_accuracy, loss.item()))
-            
+        scheduler.step()
             
         if epoch % 5 == 4:
+            print('===================Validating===================')
             net.eval()
             with torch.no_grad():
                 correct = 0
@@ -120,6 +124,7 @@ def run(net, optimizer, scheduler , criterion, num_epochs, trainloader, testload
 
         train_accu.append(train_accuracy)
         train_losses.append(train_loss)
-        # test_losses.append(test_loss)
-        # test_accu.append(test_accuracy)
+        test_losses.append(test_loss)
+        test_accu.append(test_accuracy)
 
+    return train_accu,test_accu, test_losses, train_losses 
