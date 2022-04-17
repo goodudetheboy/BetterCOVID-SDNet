@@ -106,7 +106,7 @@ def run(model_name, net, optimizer, scheduler , criterion, num_epochs, num_class
                 running_loss = 0
                 nb_classes = 2
                 confusion_matrix = torch.zeros(num_classes, num_classes)
-                for images, labels in testloader:
+                for i, (images, labels) in enumerate(testloader):
                     images = images.to(device)
                     labels = labels.to(device)
                     outputs = net(images)
