@@ -80,8 +80,7 @@ Any kind of enhancement or contribution is welcomed.
 ```
 @unpublished{
     vhmkpl2022,
-    title={BetterCOVIDSD-Net: Improving COVID-19 Severity Classification through
-Chest X-ray},
+    title={BetterCOVIDSD-Net: Improving COVID-19 Severity Classification through Chest X-ray},
     author={Vuong Ho and Minh Khoi Nguyen Do and Phuc Lam},
     year={2022},
     url={https://github.com/goodudetheboy/BetterCOVID-SDNet}
