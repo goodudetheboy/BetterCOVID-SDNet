@@ -53,7 +53,7 @@ def preprocess_data(directory:str, batch_size:int, test_size:int, rand_num:int, 
     testloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, sampler=te_sampl,num_workers=worker)
     return (trainloader, testloader)
 
-def run(model_name, net, optimizer, scheduler , criterion, num_epochs, trainloader, testloader):
+def run(model_name, net, optimizer, scheduler , criterion, num_epochs, num_classes, trainloader, testloader):
     print(f'Training on {device}')
 
     best_accuracy = float('-inf')
@@ -105,8 +105,8 @@ def run(model_name, net, optimizer, scheduler , criterion, num_epochs, trainload
                 total = 0
                 running_loss = 0
                 nb_classes = 2
-                confusion_matrix = torch.zeros(nb_classes, nb_classes)
-                for images, labels in testloader:
+                confusion_matrix = torch.zeros(num_classes, num_classes)
+                for i, (images, labels) in enumerate(testloader):
                     images = images.to(device)
                     labels = labels.to(device)
                     outputs = net(images)

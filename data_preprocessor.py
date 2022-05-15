@@ -1,27 +1,10 @@
 import pandas as pd
 import shutil
+from pathlib import Path
+import os
 
-# import sys
-# from argparse import ArgumentParser
 
-# parser = ArgumentParser()
-# parser.add_argument("-i", "--input", dest="filename",
-#                     help="write report to FILE", metavar="FILE")
-# parser.add_argument("-l", "--label", dest="filename",
-#                     help="write report to FILE", metavar="FILE")
-# parser.add_argument("-q", "--quiet",
-#                     action="store_false", dest="verbose", default=True,
-#                     help="don't print status messages to stdout")
-
-# args = parser.parse_args()
-
-# def main(args):
-#    print("something")
-
-# if __name__ == "__main__":
-#    main(args)
-
-def preprocess_data_by_severity(label_dir:str, data_original_dir:str) -> str:
+def preprocess_data_by_severity(label_dir: str, input_dir: str, output_dir: str) -> str:
     """
         label_dir: the directory of label for the severity of COVID case
         data_original_dir: the directory saving positive and negative data
@@ -33,38 +16,44 @@ def preprocess_data_by_severity(label_dir:str, data_original_dir:str) -> str:
     #make two columns to list
     names_list = severity["Name"].values.tolist() 
     severity_list = severity["Severity"].values.tolist()
-    
-    import os
+
     #make Processed directory and 4 classes directories of images
-    if os.path.exists(f"./Data/Processed"):
-        os.mkdir(os.path.join(data_original_dir, "Processed"))
-    dire = "./Data/Processed"
-    if os.path.exists(f"./Data/Processed/Moderate"):
-        os.mkdir(os.path.join(dire, "Moderate"))
-    if os.path.exists(f"./Data/Processed/Mild"):
-        os.mkdir(os.path.join(dire, "Mild"))
-    if os.path.exists(f"./Data/Processed/Severe"):
-        os.mkdir(os.path.join(dire, "Severe"))
-    if os.path.exists(f"./Data/Processed/Normal_PCR"):
-        os.mkdir(os.path.join(dire, "Normal_PCR"))
-    
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    moderate_dir = os.path.join(output_dir, "Moderate")
+    mild_dir = os.path.join(output_dir, "Mild")
+    severe_dir = os.path.join(output_dir, "Severe")
+    normal_dir = os.path.join(output_dir, "Normal_PCR")
+    neg_output_dir = os.path.join(output_dir, "Neg")
+
+    Path(moderate_dir).mkdir(parents=True, exist_ok=True)
+    Path(mild_dir).mkdir(parents=True, exist_ok=True)
+    Path(severe_dir).mkdir(parents=True, exist_ok=True)
+    Path(normal_dir).mkdir(parents=True, exist_ok=True)
+    Path(neg_output_dir).mkdir(parents=True, exist_ok=True)
+
+    positive_dir = os.path.join(input_dir, "P")
+
     #add image to corresponding class directory using label from csv file
     for i in range(len(names_list)):
+        img_dir = os.path.join(positive_dir, f"{names_list[i]}.jpg")
         if severity_list[i] == "MODERATE":
-            shutil.copy(f"./Data/P/{names_list[i]}.jpg","./Data/Processed/Moderate/")
+            shutil.copy(img_dir, moderate_dir)
         elif severity_list[i] == "MILD":
-            shutil.copy(f"./Data/P/{names_list[i]}.jpg","./Data/Processed/Mild/")
+            shutil.copy(img_dir, mild_dir)
         elif severity_list[i] == "SEVERE":
-            if os.path.exists(f"./Data/P/{names_list[i]}.jpg"):
-                shutil.copy(f"./Data/P/{names_list[i]}.jpg","./Data/Processed/Severe/")
+            if os.path.exists(img_dir):
+                shutil.copy(img_dir, severe_dir)
         else:
-            shutil.copy(f"./Data/P/{names_list[i]}.jpg","./Data/Processed/Normal_PCR/")
+            shutil.copy(img_dir, normal_dir)
     
     #make class directory for negative class
-    if os.path.exists(f"./Data/Processed/Neg"):
-        shutil.copytree("./Data/N/","./Data/Processed/Neg/")
-    return dire
+    negative_dir = os.path.join(input_dir, "N")
+    for file in os.listdir(negative_dir):
+        shutil.copy(os.path.join(negative_dir, file), neg_output_dir)
 
-dire = preprocess_data_by_severity("./severity.csv","./Data")
+    return output_dir
+
+dire = preprocess_data_by_severity("./severity.csv","./cleaned-data", './cleaned-data-processed')
 
 print(f"Finished splitting images by severity, output folder in {dire}")

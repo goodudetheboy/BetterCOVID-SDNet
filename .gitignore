@@ -1,5 +1,7 @@
 ./ipynb_checkpoints
+cleaned-data-processed/
 cleaned-data/
 __pycache__/
 checkpoints/
 model_store/
+input/
